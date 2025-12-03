@@ -941,17 +941,6 @@
             WEBHOOK_URL: 'https://hook.us2.make.com/7rl2l8rb9fb606jse1hj1iwcw810b3fj', // 👈 填入您的 Make.com Webhook URL
             
             // ----------------------------------------
-            // 👤 授權的行政人員 LINE User ID
-            // 只有這些 ID 可以存取後台
-            // 留空陣列 [] = 不驗證（測試用）
-            // 取得方式：讓行政人員使用 LIFF，從 liff.getProfile() 取得 userId
-            // ----------------------------------------
-            AUTHORIZED_USERS: [
-                'U85a128929f1dbc59f7f5fa397a5cb9f2',
-                'Ucb8c361a0b7512f4609434cd986114a0',
-            ],
-            
-            // ----------------------------------------
             // 📊 Google Sheets 設定
             // 預約資料的 Spreadsheet
             // ----------------------------------------
@@ -993,9 +982,9 @@
                     userId = profile.userId;
                     userProfile = profile;
                     
-                    // 驗證權限
-                    if (CONFIG.AUTHORIZED_USERS.length > 0 && 
-                        !CONFIG.AUTHORIZED_USERS.includes(userId)) {
+                    // 呼叫 Make.com 驗證權限
+                    const authorized = await checkAuthorization(userId);
+                    if (!authorized) {
                         showSection('unauthorizedSection');
                         return;
                     }
@@ -1011,6 +1000,32 @@
             } catch (error) {
                 console.error('Initialize failed:', error);
                 showToast('初始化失敗，請重新整理', 'error');
+            }
+        }
+
+        // 呼叫 Make.com 驗證授權
+        async function checkAuthorization(userId) {
+            try {
+                if (!CONFIG.WEBHOOK_URL) {
+                    console.error('⚠️ 請先設定 WEBHOOK_URL');
+                    return false;
+                }
+                
+                const response = await fetch(CONFIG.WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'checkAuthorization',
+                        userId: userId
+                    })
+                });
+                
+                const result = await response.json();
+                return result.authorized === true;
+                
+            } catch (error) {
+                console.error('Authorization check failed:', error);
+                return false;
             }
         }
 
@@ -1199,7 +1214,8 @@
                         course: currentBooking.course,
                         date: currentBooking.date,
                         startTime: currentBooking.startTime,
-                        endTime: currentBooking.endTime
+                        endTime: currentBooking.endTime,
+                        originalCoach: currentBooking.coach || ''  // 👈 傳送原本的教練
                     })
                 });
                 const coaches = await response.json();
