@@ -782,8 +782,8 @@
                             <span class="info-value" id="modalTime">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">學生 LINE</span>
-                            <span class="info-value" id="modalLineId">-</span>
+                            <span class="info-label">學生</span>
+                            <span class="info-value" id="modalDisplayName">-</span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">結帳期限</span>
@@ -946,9 +946,9 @@
             // 留空陣列 [] = 不驗證（測試用）
             // 取得方式：讓行政人員使用 LIFF，從 liff.getProfile() 取得 userId
             // ----------------------------------------
-            AUTHORIZED_USERS: [ 
-                 'U85a128929f1dbc59f7f5fa397a5cb9f2',
-                 'Ucb8c361a0b7512f4609434cd986114a0',
+            AUTHORIZED_USERS: [
+                'U85a128929f1dbc59f7f5fa397a5cb9f2',
+                'Ucb8c361a0b7512f4609434cd986114a0',
             ],
             
             // ----------------------------------------
@@ -1088,6 +1088,7 @@
                     </div>
                     <div class="booking-course">${booking.course}</div>
                     <div class="booking-info">
+                        <span>👤 ${booking.displayName || '-'}</span>
                         <span>📅 ${formatDate(booking.date)}</span>
                         <span>⏰ ${booking.startTime} - ${booking.endTime}</span>
                     </div>
@@ -1095,7 +1096,7 @@
                         <div class="booking-deadline">⏳ 結帳期限：${booking.deadline}</div>
                     ` : ''}
                     ${booking.status === '已確認' && booking.coach ? `
-                        <div class="booking-coach">👤 教練：${booking.coach}</div>
+                        <div class="booking-coach">🏋️ 教練：${booking.coach}</div>
                     ` : ''}
                     ${(booking.status === '已取消' || booking.status === '已過期') && booking.cancelReason ? `
                         <div class="booking-cancel-reason">❌ ${booking.cancelReason}</div>
@@ -1126,7 +1127,7 @@
             document.getElementById('modalCourse').textContent = currentBooking.course;
             document.getElementById('modalDate').textContent = formatDate(currentBooking.date);
             document.getElementById('modalTime').textContent = `${currentBooking.startTime} - ${currentBooking.endTime}`;
-            document.getElementById('modalLineId').textContent = currentBooking.lineId;
+            document.getElementById('modalDisplayName').textContent = currentBooking.displayName || '-';
             document.getElementById('modalDeadline').textContent = currentBooking.deadline;
             
             // 根據狀態顯示不同內容
