@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>體驗課預約管理 | 衡點健身</title>
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        :root {
+            /* 品牌色系 */
+            --white: #ffffff;
+            --gray: #808080;
+            --gray-light: #f5f5f5;
+            --green: #7ac19a;
+            --green-light: #e2ede6;
+            --green-dark: #5f846f;
+            --pink: #f2ac98;
+            --pink-light: #faece8;
+            --pink-dark: #c67566;
+            --yellow: #ffe08b;
+            --yellow-light: #fcf4e3;
+            --yellow-dark: #ba9e60;
+            --blue: #9fcccc;
+            --blue-light: #daedec;
+            --blue-dark: #66888e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--gray-light);
+            min-height: 100vh;
+        }
+
+        /* ===== Header（明鏡藍）===== */
+        .header {
+            background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: 8px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-top: 8px;
+        }
+
+        /* ===== Container ===== */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+
+        /* ===== Tabs（明鏡藍）===== */
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 12px;
+            padding: 5px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 10px 5px;
+            text-align: center;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: var(--gray);
+        }
+
+        .tab.active {
+            background: var(--blue);
+            color: white;
+        }
+
+        .tab .count {
+            display: inline-block;
+            background: var(--pink);
+            color: white;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 5px;
+        }
+
+        .tab.active .count {
+            background: white;
+            color: var(--blue-dark);
+        }
+
+        /* ===== Stats（黃綠粉數字）===== */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .stat-card.pending .stat-number { color: var(--yellow-dark); }
+        .stat-card.confirmed .stat-number { color: var(--green-dark); }
+        .stat-card.cancelled .stat-number { color: var(--pink-dark); }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--gray);
+            margin-top: 5px;
+        }
+
+        /* ===== Booking List ===== */
+        .booking-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .booking-card {
+            background: white;
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 4px solid var(--yellow);
+        }
+
+        .booking-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .booking-card.confirmed {
+            border-left-color: var(--green);
+        }
+
+        .booking-card.cancelled {
+            border-left-color: var(--gray);
+            opacity: 0.7;
+        }
+
+        .booking-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .booking-id {
+            font-size: 12px;
+            color: var(--gray);
+        }
+
+        .booking-status {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+
+        .booking-status.pending {
+            background: var(--yellow-light);
+            color: var(--yellow-dark);
+        }
+
+        .booking-status.confirmed {
+            background: var(--green-light);
+            color: var(--green-dark);
+        }
+
+        .booking-status.cancelled {
+            background: var(--gray-light);
+            color: var(--gray);
+        }
+
+        .booking-course {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--blue-dark);
+            margin-bottom: 8px;
+        }
+
+        .booking-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .booking-info span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .booking-deadline {
+            font-size: 12px;
+            color: var(--pink-dark);
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #eee;
+        }
+
+        .booking-coach {
+            font-size: 12px;
+            color: var(--green-dark);
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #eee;
+        }
+
+        .booking-cancel-reason {
+            font-size: 12px;
+            color: var(--pink-dark);
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #eee;
+        }
+
+        /* ===== Modal ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 450px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalIn 0.3s ease;
+        }
+
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Modal Header（藍色淺底）*/
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--blue-light);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--blue-dark);
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            color: var(--gray);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-section {
+            margin-bottom: 20px;
+        }
+
+        .modal-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray);
+            margin-bottom: 10px;
+        }
+
+        /* Info Box（藍黃搭配）*/
+        .info-box {
+            background: var(--yellow-light);
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+        .info-box.blue {
+            background: var(--blue-light);
+        }
+
+        .info-box.green {
+            background: var(--green-light);
+        }
+
+        .info-box.pink {
+            background: var(--pink-light);
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.5);
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: var(--gray);
+            font-size: 13px;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: var(--yellow-dark);
+            font-size: 14px;
+        }
+
+        .info-box.blue .info-value {
+            color: var(--blue-dark);
+        }
+
+        .info-box.green .info-value {
+            color: var(--green-dark);
+        }
+
+        .info-box.pink .info-value {
+            color: var(--pink-dark);
+        }
+
+        /* ===== Form Elements ===== */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #eee;
+            border-radius: 10px;
+            font-size: 15px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: var(--blue);
+        }
+
+        textarea.form-select {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* Coach Options */
+        .coach-option {
+            padding: 12px;
+            border: 2px solid #eee;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .coach-option:hover {
+            border-color: var(--blue);
+            background: var(--blue-light);
+        }
+
+        .coach-option.selected {
+            border-color: var(--blue);
+            background: var(--blue-light);
+        }
+
+        .coach-option.original {
+            border-color: var(--yellow);
+            background: var(--yellow-light);
+        }
+
+        .coach-radio {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ccc;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .coach-option.selected .coach-radio {
+            border-color: var(--blue);
+        }
+
+        .coach-option.selected .coach-radio::after {
+            content: '';
+            width: 10px;
+            height: 10px;
+            background: var(--blue);
+            border-radius: 50%;
+        }
+
+        .coach-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .coach-tag {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: var(--yellow);
+            color: var(--yellow-dark);
+        }
+
+        /* Checkbox */
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            padding: 15px;
+            background: var(--green-light);
+            border-radius: 10px;
+            border: 2px solid var(--green-light);
+            transition: all 0.3s;
+        }
+
+        .checkbox-label:hover {
+            border-color: var(--green);
+        }
+
+        .checkbox-label.checked {
+            border-color: var(--green);
+            background: var(--green-light);
+        }
+
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--gray);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .checkbox.checked {
+            background: var(--green);
+            border-color: var(--green);
+        }
+
+        .checkbox.checked::after {
+            content: '✓';
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        /* ===== Buttons ===== */
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-confirm {
+            background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(159, 204, 204, 0.4);
+        }
+
+        .btn-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(159, 204, 204, 0.5);
+        }
+
+        .btn-confirm:disabled {
+            background: #ccc;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-cancel {
+            background: var(--pink-light);
+            color: var(--pink-dark);
+            margin-top: 10px;
+        }
+
+        .btn-cancel:hover {
+            background: var(--pink);
+            color: white;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-group .btn {
+            flex: 1;
+        }
+
+        .btn-secondary {
+            background: var(--gray-light);
+            color: var(--gray);
+        }
+
+        /* ===== Loading ===== */
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--blue-light);
+            border-top-color: var(--blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ===== Empty State ===== */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--gray);
+        }
+
+        .empty-state .icon {
+            font-size: 50px;
+            margin-bottom: 15px;
+        }
+
+        /* ===== Unauthorized ===== */
+        .unauthorized {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .unauthorized .icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+
+        .unauthorized h2 {
+            color: var(--pink-dark);
+            margin-bottom: 10px;
+        }
+
+        .unauthorized p {
+            color: var(--gray);
+            font-size: 14px;
+        }
+
+        /* ===== Toast ===== */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 14px;
+            z-index: 2000;
+            animation: toastIn 0.3s ease;
+        }
+
+        .toast.success {
+            background: var(--green-dark);
+        }
+
+        .toast.error {
+            background: var(--pink-dark);
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        /* ===== Section ===== */
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        /* ===== Warning Box ===== */
+        .warning-box {
+            background: var(--yellow-light);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+
+        .warning-box p {
+            font-size: 13px;
+            color: var(--yellow-dark);
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1>─ 衡點 ─</h1>
+        <p>📋 體驗課預約管理</p>
+    </div>
+
+    <div class="container">
+        <!-- Loading Section -->
+        <div class="section active" id="loadingSection">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>載入中...</p>
+            </div>
+        </div>
+
+        <!-- Unauthorized Section -->
+        <div class="section" id="unauthorizedSection">
+            <div class="unauthorized">
+                <div class="icon">🔒</div>
+                <h2>無法存取</h2>
+                <p>您沒有權限使用此系統<br>請聯繫管理員</p>
+            </div>
+        </div>
+
+        <!-- Main Section -->
+        <div class="section" id="mainSection">
+            <!-- Stats -->
+            <div class="stats">
+                <div class="stat-card pending">
+                    <div class="stat-number" id="pendingCount">0</div>
+                    <div class="stat-label">待確認</div>
+                </div>
+                <div class="stat-card confirmed">
+                    <div class="stat-number" id="confirmedCount">0</div>
+                    <div class="stat-label">已確認</div>
+                </div>
+                <div class="stat-card cancelled">
+                    <div class="stat-number" id="cancelledCount">0</div>
+                    <div class="stat-label">已取消</div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <div class="tab active" data-tab="pending" onclick="switchTab('pending')">
+                    待確認 <span class="count" id="pendingTabCount">0</span>
+                </div>
+                <div class="tab" data-tab="confirmed" onclick="switchTab('confirmed')">
+                    已確認
+                </div>
+                <div class="tab" data-tab="cancelled" onclick="switchTab('cancelled')">
+                    已取消
+                </div>
+                <div class="tab" data-tab="all" onclick="switchTab('all')">
+                    全部
+                </div>
+            </div>
+
+            <!-- Booking List -->
+            <div class="booking-list" id="bookingList">
+                <!-- Bookings will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">📋 預約詳情</div>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- 預約資訊 -->
+                <div class="modal-section">
+                    <div class="modal-section-title">預約資訊</div>
+                    <div class="info-box">
+                        <div class="info-row">
+                            <span class="info-label">預約編號</span>
+                            <span class="info-value" id="modalBookingId">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">課程類型</span>
+                            <span class="info-value" id="modalCourse">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">預約日期</span>
+                            <span class="info-value" id="modalDate">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">預約時段</span>
+                            <span class="info-value" id="modalTime">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">學生 LINE</span>
+                            <span class="info-value" id="modalLineId">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">結帳期限</span>
+                            <span class="info-value" id="modalDeadline">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 分配教練（待確認狀態顯示） -->
+                <div class="modal-section" id="coachSection">
+                    <div class="modal-section-title">選擇/調整教練</div>
+                    <div id="coachList">
+                        <!-- Coach options will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- 操作按鈕（待確認狀態顯示） -->
+                <div id="actionButtons">
+                    <button class="btn btn-confirm" id="confirmBtn" onclick="confirmBooking()" disabled>
+                        ✅ 確認付款並分配教練
+                    </button>
+                    <button class="btn btn-cancel" onclick="showCancelConfirm()">
+                        ❌ 取消此預約
+                    </button>
+                </div>
+
+                <!-- 已確認狀態顯示 -->
+                <div id="confirmedInfo" style="display: none;">
+                    <div class="info-box green">
+                        <div class="info-row">
+                            <span class="info-label">分配教練</span>
+                            <span class="info-value" id="modalCoach">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">確認時間</span>
+                            <span class="info-value" id="modalConfirmTime">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">確認人員</span>
+                            <span class="info-value" id="modalConfirmBy">-</span>
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-cancel" onclick="showRefundCancelModal()" style="margin-top: 15px;">
+                        ❌ 取消預約（已付款）
+                    </button>
+                </div>
+
+                <!-- 已取消狀態顯示 -->
+                <div id="cancelledInfo" style="display: none;">
+                    <div class="info-box pink">
+                        <div class="info-row">
+                            <span class="info-label">取消原因</span>
+                            <span class="info-value" id="modalCancelReason">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">取消時間</span>
+                            <span class="info-value" id="modalCancelTime">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">取消人員</span>
+                            <span class="info-value" id="modalCancelBy">-</span>
+                        </div>
+                        <div class="info-row" id="cancelNoteRow" style="display: none;">
+                            <span class="info-label">備註</span>
+                            <span class="info-value" id="modalCancelNote">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancel Confirm Modal -->
+    <div class="modal-overlay" id="cancelConfirmModal">
+        <div class="modal" style="max-width: 350px;">
+            <div class="modal-body" style="text-align: center; padding: 30px;">
+                <div style="font-size: 50px; margin-bottom: 15px;">🤔</div>
+                <div style="font-size: 18px; font-weight: 600; margin-bottom: 10px;">確定要取消預約嗎？</div>
+                <p style="color: var(--gray); font-size: 14px; margin-bottom: 20px;">
+                    取消後將自動釋出時段<br>並通知顧客
+                </p>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="closeCancelConfirm()">再想想</button>
+                    <button class="btn btn-cancel" onclick="cancelBooking()" style="margin-top: 0;">確定取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Refund Cancel Modal (已付款的取消) -->
+    <div class="modal-overlay" id="refundCancelModal">
+        <div class="modal" style="max-width: 400px;">
+            <div class="modal-header">
+                <div class="modal-title">💰 取消預約（已付款）</div>
+                <button class="modal-close" onclick="closeRefundCancelModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">取消原因</label>
+                    <select class="form-select" id="cancelReason">
+                        <option value="">請選擇原因</option>
+                        <option value="學生個人因素">學生個人因素</option>
+                        <option value="時間無法配合">時間無法配合</option>
+                        <option value="教練異動">教練異動</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">備註（選填）</label>
+                    <textarea class="form-select" id="cancelNote" rows="3" placeholder="輸入備註..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-label" onclick="toggleRefundConfirm()">
+                        <div class="checkbox" id="refundCheckbox"></div>
+                        <span>✅ 確認已辦理退款</span>
+                    </label>
+                </div>
+                
+                <div class="warning-box">
+                    <p>
+                        ⚠️ 確認後將：<br>
+                        • 更新預約狀態為「已取消」<br>
+                        • 釋出 Calendar 時段<br>
+                        • 發送 LINE 通知給顧客
+                    </p>
+                </div>
+                
+                <button class="btn btn-cancel" id="refundCancelBtn" onclick="confirmRefundCancel()" disabled style="margin-top: 0;">
+                    確認取消
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // ⚙️ 設定區域 - 請在此填入您的資訊
+        // ============================================
+        const CONFIG = {
+            // ----------------------------------------
+            // 📱 LIFF ID
+            // 從 LINE Developers Console 取得
+            // 路徑：LINE Developers > 您的 Provider > 您的 Channel > LIFF
+            // ----------------------------------------
+            LIFF_ID: '2007947083-8wLAewJR', // 👈 填入您的 LIFF ID，例如：'2007947083-xxxxxxxx'
+            
+            // ----------------------------------------
+            // 🔗 Webhook URL (Make.com)
+            // 建立新的 Scenario，使用 Webhook trigger
+            // 用於處理行政後台的所有操作
+            // ----------------------------------------
+            WEBHOOK_URL: 'https://hook.us2.make.com/7rl2l8rb9fb606jse1hj1iwcw810b3fj', // 👈 填入您的 Make.com Webhook URL
+            
+            // ----------------------------------------
+            // 👤 授權的行政人員 LINE User ID
+            // 只有這些 ID 可以存取後台
+            // 留空陣列 [] = 不驗證（測試用）
+            // 取得方式：讓行政人員使用 LIFF，從 liff.getProfile() 取得 userId
+            // ----------------------------------------
+            AUTHORIZED_USERS: [ 
+                 'U85a128929f1dbc59f7f5fa397a5cb9f2',
+                 'Ucb8c361a0b7512f4609434cd986114a0',
+            ],
+            
+            // ----------------------------------------
+            // 📊 Google Sheets 設定
+            // 預約資料的 Spreadsheet
+            // ----------------------------------------
+            SPREADSHEET_ID: '1WPrkqpOycQ0NvLmP8RYCIyxNl3Rn8kzfXFCIe50pfMg', // 👈 您的 Spreadsheet ID
+            SHEET_NAME: '顧客體驗課預約' // 👈 Sheet 名稱
+        };
+
+        // ============================================
+        // 全域變數
+        // ============================================
+        let userId = null;
+        let userProfile = null;
+        let bookings = [];
+        let currentBooking = null;
+        let selectedCoach = null;
+        let currentTab = 'pending';
+        let refundConfirmed = false;
+
+        // ============================================
+        // 頁面初始化
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            initializePage();
+        });
+
+        async function initializePage() {
+            try {
+                if (!CONFIG.LIFF_ID) {
+                    console.error('⚠️ 請先設定 LIFF_ID');
+                    showToast('請先設定 LIFF ID', 'error');
+                    return;
+                }
+                
+                // LIFF 初始化
+                await liff.init({ liffId: CONFIG.LIFF_ID });
+                
+                if (liff.isLoggedIn()) {
+                    const profile = await liff.getProfile();
+                    userId = profile.userId;
+                    userProfile = profile;
+                    
+                    // 驗證權限
+                    if (CONFIG.AUTHORIZED_USERS.length > 0 && 
+                        !CONFIG.AUTHORIZED_USERS.includes(userId)) {
+                        showSection('unauthorizedSection');
+                        return;
+                    }
+                } else {
+                    liff.login();
+                    return;
+                }
+                
+                // 載入預約列表
+                await loadBookings();
+                showSection('mainSection');
+                
+            } catch (error) {
+                console.error('Initialize failed:', error);
+                showToast('初始化失敗，請重新整理', 'error');
+            }
+        }
+
+        // ============================================
+        // 載入預約
+        // ============================================
+        async function loadBookings() {
+            try {
+                if (!CONFIG.WEBHOOK_URL) {
+                    console.error('⚠️ 請先設定 WEBHOOK_URL');
+                    showToast('請先設定 Webhook URL', 'error');
+                    return;
+                }
+                
+                // 從 Webhook 取得資料
+                const response = await fetch(CONFIG.WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'getBookings' })
+                });
+                bookings = await response.json();
+                
+                updateStats();
+                renderBookings();
+                
+            } catch (error) {
+                console.error('Load bookings failed:', error);
+                showToast('載入失敗，請重試', 'error');
+            }
+        }
+
+
+
+        function updateStats() {
+            const pending = bookings.filter(b => b.status === '保留中').length;
+            const confirmed = bookings.filter(b => b.status === '已確認').length;
+            const cancelled = bookings.filter(b => b.status === '已取消' || b.status === '已過期').length;
+            
+            document.getElementById('pendingCount').textContent = pending;
+            document.getElementById('confirmedCount').textContent = confirmed;
+            document.getElementById('cancelledCount').textContent = cancelled;
+            document.getElementById('pendingTabCount').textContent = pending;
+        }
+
+        function renderBookings() {
+            const list = document.getElementById('bookingList');
+            
+            let filtered = bookings;
+            if (currentTab === 'pending') {
+                filtered = bookings.filter(b => b.status === '保留中');
+            } else if (currentTab === 'confirmed') {
+                filtered = bookings.filter(b => b.status === '已確認');
+            } else if (currentTab === 'cancelled') {
+                filtered = bookings.filter(b => b.status === '已取消' || b.status === '已過期');
+            }
+            
+            if (filtered.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📭</div>
+                        <p>沒有預約資料</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            list.innerHTML = filtered.map(booking => `
+                <div class="booking-card ${booking.status === '已確認' ? 'confirmed' : ''} ${booking.status === '已取消' || booking.status === '已過期' ? 'cancelled' : ''}" 
+                     onclick="openDetail('${booking.id}')">
+                    <div class="booking-header">
+                        <span class="booking-id">${booking.id}</span>
+                        <span class="booking-status ${booking.status === '保留中' ? 'pending' : booking.status === '已確認' ? 'confirmed' : 'cancelled'}">
+                            ${booking.status}
+                        </span>
+                    </div>
+                    <div class="booking-course">${booking.course}</div>
+                    <div class="booking-info">
+                        <span>📅 ${formatDate(booking.date)}</span>
+                        <span>⏰ ${booking.startTime} - ${booking.endTime}</span>
+                    </div>
+                    ${booking.status === '保留中' ? `
+                        <div class="booking-deadline">⏳ 結帳期限：${booking.deadline}</div>
+                    ` : ''}
+                    ${booking.status === '已確認' && booking.coach ? `
+                        <div class="booking-coach">👤 教練：${booking.coach}</div>
+                    ` : ''}
+                    ${(booking.status === '已取消' || booking.status === '已過期') && booking.cancelReason ? `
+                        <div class="booking-cancel-reason">❌ ${booking.cancelReason}</div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        // ============================================
+        // 切換 Tab
+        // ============================================
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+            renderBookings();
+        }
+
+        // ============================================
+        // 預約詳情
+        // ============================================
+        function openDetail(bookingId) {
+            currentBooking = bookings.find(b => b.id === bookingId);
+            if (!currentBooking) return;
+            
+            // 填入資料
+            document.getElementById('modalBookingId').textContent = currentBooking.id;
+            document.getElementById('modalCourse').textContent = currentBooking.course;
+            document.getElementById('modalDate').textContent = formatDate(currentBooking.date);
+            document.getElementById('modalTime').textContent = `${currentBooking.startTime} - ${currentBooking.endTime}`;
+            document.getElementById('modalLineId').textContent = currentBooking.lineId;
+            document.getElementById('modalDeadline').textContent = currentBooking.deadline;
+            
+            // 根據狀態顯示不同內容
+            if (currentBooking.status === '保留中') {
+                document.getElementById('coachSection').style.display = 'block';
+                document.getElementById('actionButtons').style.display = 'block';
+                document.getElementById('confirmedInfo').style.display = 'none';
+                document.getElementById('cancelledInfo').style.display = 'none';
+                loadAvailableCoaches();
+            } else if (currentBooking.status === '已確認') {
+                document.getElementById('coachSection').style.display = 'none';
+                document.getElementById('actionButtons').style.display = 'none';
+                document.getElementById('confirmedInfo').style.display = 'block';
+                document.getElementById('cancelledInfo').style.display = 'none';
+                document.getElementById('modalCoach').textContent = currentBooking.coach;
+                document.getElementById('modalConfirmTime').textContent = currentBooking.confirmTime;
+                document.getElementById('modalConfirmBy').textContent = currentBooking.confirmBy;
+            } else if (currentBooking.status === '已取消' || currentBooking.status === '已過期') {
+                document.getElementById('coachSection').style.display = 'none';
+                document.getElementById('actionButtons').style.display = 'none';
+                document.getElementById('confirmedInfo').style.display = 'none';
+                document.getElementById('cancelledInfo').style.display = 'block';
+                document.getElementById('modalCancelReason').textContent = currentBooking.cancelReason || '-';
+                document.getElementById('modalCancelTime').textContent = currentBooking.cancelTime || '-';
+                document.getElementById('modalCancelBy').textContent = currentBooking.cancelBy || '-';
+                
+                // 備註
+                if (currentBooking.cancelNote) {
+                    document.getElementById('cancelNoteRow').style.display = 'flex';
+                    document.getElementById('modalCancelNote').textContent = currentBooking.cancelNote;
+                } else {
+                    document.getElementById('cancelNoteRow').style.display = 'none';
+                }
+            } else {
+                document.getElementById('coachSection').style.display = 'none';
+                document.getElementById('actionButtons').style.display = 'none';
+                document.getElementById('confirmedInfo').style.display = 'none';
+                document.getElementById('cancelledInfo').style.display = 'none';
+            }
+            
+            document.getElementById('detailModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').classList.remove('active');
+            currentBooking = null;
+            selectedCoach = null;
+        }
+
+        // ============================================
+        // 載入可用教練
+        // ============================================
+        async function loadAvailableCoaches() {
+            const coachList = document.getElementById('coachList');
+            coachList.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            
+            try {
+                if (!CONFIG.WEBHOOK_URL) {
+                    coachList.innerHTML = '<p style="color: var(--pink-dark);">請先設定 Webhook URL</p>';
+                    return;
+                }
+                
+                // 從 Calendar 取得可用教練
+                const response = await fetch(CONFIG.WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'getAvailableCoaches',
+                        course: currentBooking.course,
+                        date: currentBooking.date,
+                        startTime: currentBooking.startTime,
+                        endTime: currentBooking.endTime
+                    })
+                });
+                const coaches = await response.json();
+                
+                if (coaches.length === 0) {
+                    coachList.innerHTML = '<p style="color: var(--gray); text-align: center;">沒有可用教練</p>';
+                    return;
+                }
+                
+                coachList.innerHTML = coaches.map(coach => `
+                    <div class="coach-option ${coach.isOriginal ? 'original' : ''}" 
+                         onclick="selectCoach('${coach.name}', this)">
+                        <div class="coach-radio"></div>
+                        <span class="coach-name">${coach.name}</span>
+                        ${coach.isOriginal ? '<span class="coach-tag">原時段</span>' : ''}
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Load coaches failed:', error);
+                coachList.innerHTML = '<p style="color: var(--pink-dark);">載入失敗</p>';
+            }
+        }
+
+
+
+        function selectCoach(coachName, element) {
+            selectedCoach = coachName;
+            
+            // 更新 UI
+            document.querySelectorAll('.coach-option').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+            
+            // 啟用確認按鈕
+            document.getElementById('confirmBtn').disabled = false;
+        }
+
+        // ============================================
+        // 確認預約
+        // ============================================
+        async function confirmBooking() {
+            if (!currentBooking || !selectedCoach) return;
+            
+            const confirmBtn = document.getElementById('confirmBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;"></div> 處理中...';
+            
+            try {
+                if (CONFIG.WEBHOOK_URL) {
+                    // 正式版：呼叫 Webhook
+                    const response = await fetch(CONFIG.WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'confirmBooking',
+                            bookingId: currentBooking.id,
+                            rowNumber: currentBooking.rowNumber,
+                            course: currentBooking.course,
+                            date: currentBooking.date,
+                            startTime: currentBooking.startTime,
+                            endTime: currentBooking.endTime,
+                            lineId: currentBooking.lineId,
+                            coach: selectedCoach,
+                            confirmedBy: userProfile ? userProfile.displayName : '行政人員'
+                        })
+                    });
+                    const result = await response.json();
+                } else {
+                    // 測試版：模擬成功
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+                
+                // 更新本地資料
+                const index = bookings.findIndex(b => b.id === currentBooking.id);
+                if (index !== -1) {
+                    bookings[index].status = '已確認';
+                    bookings[index].coach = selectedCoach;
+                    bookings[index].confirmTime = new Date().toLocaleString('zh-TW');
+                    bookings[index].confirmBy = userProfile ? userProfile.displayName : '行政人員';
+                }
+                
+                closeModal();
+                updateStats();
+                renderBookings();
+                showToast('✅ 預約已確認！已通知顧客', 'success');
+                
+            } catch (error) {
+                console.error('Confirm booking failed:', error);
+                showToast('確認失敗，請重試', 'error');
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '✅ 確認付款並分配教練';
+            }
+        }
+
+        // ============================================
+        // 取消預約（未付款）
+        // ============================================
+        function showCancelConfirm() {
+            document.getElementById('cancelConfirmModal').classList.add('active');
+        }
+
+        function closeCancelConfirm() {
+            document.getElementById('cancelConfirmModal').classList.remove('active');
+        }
+
+        async function cancelBooking() {
+            if (!currentBooking) return;
+            
+            try {
+                if (CONFIG.WEBHOOK_URL) {
+                    // 正式版：呼叫 Webhook
+                    const response = await fetch(CONFIG.WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'adminCancelBooking',
+                            bookingId: currentBooking.id,
+                            rowNumber: currentBooking.rowNumber,
+                            course: currentBooking.course,
+                            date: currentBooking.date,
+                            startTime: currentBooking.startTime,
+                            endTime: currentBooking.endTime,
+                            lineId: currentBooking.lineId,
+                            cancelReason: '行政人員取消（未付款）',
+                            cancelledBy: userProfile ? userProfile.displayName : '行政人員'
+                        })
+                    });
+                } else {
+                    // 測試版：模擬成功
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+                
+                // 更新本地資料
+                const index = bookings.findIndex(b => b.id === currentBooking.id);
+                if (index !== -1) {
+                    bookings[index].status = '已取消';
+                    bookings[index].cancelReason = '行政人員取消（未付款）';
+                    bookings[index].cancelTime = new Date().toLocaleString('zh-TW');
+                    bookings[index].cancelBy = userProfile ? userProfile.displayName : '行政人員';
+                }
+                
+                closeCancelConfirm();
+                closeModal();
+                updateStats();
+                renderBookings();
+                showToast('預約已取消，已通知顧客', 'success');
+                
+            } catch (error) {
+                console.error('Cancel booking failed:', error);
+                showToast('取消失敗，請重試', 'error');
+            }
+        }
+
+        // ============================================
+        // 退款取消（已付款的預約）
+        // ============================================
+        function showRefundCancelModal() {
+            document.getElementById('cancelReason').value = '';
+            document.getElementById('cancelNote').value = '';
+            refundConfirmed = false;
+            document.getElementById('refundCheckbox').classList.remove('checked');
+            document.querySelector('.checkbox-label').classList.remove('checked');
+            document.getElementById('refundCancelBtn').disabled = true;
+            document.getElementById('refundCancelModal').classList.add('active');
+        }
+
+        function closeRefundCancelModal() {
+            document.getElementById('refundCancelModal').classList.remove('active');
+        }
+
+        function toggleRefundConfirm() {
+            refundConfirmed = !refundConfirmed;
+            const checkbox = document.getElementById('refundCheckbox');
+            const label = document.querySelector('.checkbox-label');
+            
+            if (refundConfirmed) {
+                checkbox.classList.add('checked');
+                label.classList.add('checked');
+            } else {
+                checkbox.classList.remove('checked');
+                label.classList.remove('checked');
+            }
+            
+            checkRefundForm();
+        }
+
+        // 監聽選項變更
+        document.addEventListener('DOMContentLoaded', function() {
+            const cancelReason = document.getElementById('cancelReason');
+            
+            if (cancelReason) {
+                cancelReason.addEventListener('change', checkRefundForm);
+            }
+        });
+
+        function checkRefundForm() {
+            const reason = document.getElementById('cancelReason').value;
+            document.getElementById('refundCancelBtn').disabled = !(reason && refundConfirmed);
+        }
+
+        async function confirmRefundCancel() {
+            if (!currentBooking) return;
+            
+            const reason = document.getElementById('cancelReason').value;
+            const note = document.getElementById('cancelNote').value;
+            
+            if (!reason || !refundConfirmed) {
+                showToast('請選擇取消原因並確認已辦理退款', 'error');
+                return;
+            }
+            
+            const refundCancelBtn = document.getElementById('refundCancelBtn');
+            refundCancelBtn.disabled = true;
+            refundCancelBtn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;"></div> 處理中...';
+            
+            try {
+                if (CONFIG.WEBHOOK_URL) {
+                    // 正式版：呼叫 Webhook
+                    const response = await fetch(CONFIG.WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'refundCancelBooking',
+                            bookingId: currentBooking.id,
+                            rowNumber: currentBooking.rowNumber,
+                            course: currentBooking.course,
+                            date: currentBooking.date,
+                            startTime: currentBooking.startTime,
+                            endTime: currentBooking.endTime,
+                            lineId: currentBooking.lineId,
+                            cancelReason: reason,
+                            note: note,
+                            cancelledBy: userProfile ? userProfile.displayName : '行政人員'
+                        })
+                    });
+                } else {
+                    // 測試版：模擬成功
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+                
+                // 更新本地資料
+                const index = bookings.findIndex(b => b.id === currentBooking.id);
+                if (index !== -1) {
+                    bookings[index].status = '已取消';
+                    bookings[index].cancelReason = reason;
+                    bookings[index].cancelTime = new Date().toLocaleString('zh-TW');
+                    bookings[index].cancelBy = userProfile ? userProfile.displayName : '行政人員';
+                    bookings[index].cancelNote = note;
+                }
+                
+                closeRefundCancelModal();
+                closeModal();
+                updateStats();
+                renderBookings();
+                showToast('✅ 預約已取消，時段已釋出，已通知顧客', 'success');
+                
+            } catch (error) {
+                console.error('Refund cancel failed:', error);
+                showToast('取消失敗，請重試', 'error');
+                refundCancelBtn.disabled = false;
+                refundCancelBtn.innerHTML = '確認取消';
+            }
+        }
+
+        // ============================================
+        // 工具函數
+        // ============================================
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+            return `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')} (${weekdays[date.getDay()]})`;
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
