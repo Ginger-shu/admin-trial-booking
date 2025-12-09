@@ -962,100 +962,144 @@
         // ============================================
         // 頁面初始化
         // ============================================
-        document.addEventListener('DOMContentLoaded', function() {
-            initializePage();
-        });
+        window.onload = function() {
+    if (typeof liff === 'undefined') {
+        showToast('LIFF SDK 載入失敗', 'error');
+        return;
+    }
+    initializePage();
+};
 
         async function initializePage() {
-            try {
-                if (!CONFIG.LIFF_ID) {
-                    console.error('⚠️ 請先設定 LIFF_ID');
-                    showToast('請先設定 LIFF ID', 'error');
-                    return;
-                }
-                
-                // LIFF 初始化
-                await liff.init({ liffId: CONFIG.LIFF_ID });
-                
-                if (liff.isLoggedIn()) {
-                    const profile = await liff.getProfile();
-                    userId = profile.userId;
-                    userProfile = profile;
-                    
-                    // 呼叫 Make.com 驗證權限
-                    const authorized = await checkAuthorization(userId);
-                    if (!authorized) {
-                        showSection('unauthorizedSection');
-                        return;
-                    }
-                } else {
-                    liff.login();
-                    return;
-                }
-                
-                // 載入預約列表
-                await loadBookings();
-                showSection('mainSection');
-                
-            } catch (error) {
-                console.error('Initialize failed:', error);
-                showToast('初始化失敗，請重新整理', 'error');
-            }
+    try {
+        if (!CONFIG.LIFF_ID) {
+            showToast('請先設定 LIFF ID', 'error');
+            return;
         }
+        
+        // LIFF 初始化（加入 timeout）
+        const liffInitPromise = liff.init({ liffId: CONFIG.LIFF_ID });
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('LIFF 初始化逾時')), 10000)
+        );
+        
+        await Promise.race([liffInitPromise, timeoutPromise]);
+        
+        if (liff.isLoggedIn()) {
+            const profile = await liff.getProfile();
+            userId = profile.userId;
+            userProfile = profile;
+            
+            const authorized = await checkAuthorization(userId);
+            if (!authorized) {
+                showSection('unauthorizedSection');
+                return;
+            }
+        } else {
+            if (liff.isInClient()) {
+                liff.login();
+            } else {
+                liff.login({ redirectUri: window.location.href });
+            }
+            return;
+        }
+        
+        await loadBookings();
+        showSection('mainSection');
+        
+    } catch (error) {
+        console.error('Initialize failed:', error);
+        showToast('初始化失敗：' + error.message, 'error');
+    }
+}
 
         // 呼叫 Make.com 驗證授權
-        async function checkAuthorization(userId) {
-            try {
-                if (!CONFIG.WEBHOOK_URL) {
-                    console.error('⚠️ 請先設定 WEBHOOK_URL');
-                    return false;
-                }
-                
-                const response = await fetch(CONFIG.WEBHOOK_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'checkAuthorization',
-                        userId: userId
-                    })
-                });
-                
-                const result = await response.json();
-                return result.authorized === true;
-                
-            } catch (error) {
-                console.error('Authorization check failed:', error);
-                return false;
-            }
+        // 呼叫 Make.com 驗證授權
+async function checkAuthorization(userId) {
+    try {
+        if (!CONFIG.WEBHOOK_URL) {
+            console.error('請先設定 WEBHOOK_URL');
+            return false;
         }
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        
+        const response = await fetch(CONFIG.WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'checkAuthorization',
+                userId: userId
+            }),
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            throw new Error('伺服器回應錯誤: ' + response.status);
+        }
+        
+        const result = await response.json();
+        return result.authorized === true;
+        
+    } catch (error) {
+        console.error('Authorization check failed:', error);
+        if (error.name === 'AbortError') {
+            showToast('連線逾時，請檢查網路', 'error');
+        }
+        return false;
+    }
+}
 
         // ============================================
         // 載入預約
         // ============================================
         async function loadBookings() {
-            try {
-                if (!CONFIG.WEBHOOK_URL) {
-                    console.error('⚠️ 請先設定 WEBHOOK_URL');
-                    showToast('請先設定 Webhook URL', 'error');
-                    return;
-                }
-                
-                // 從 Webhook 取得資料
-                const response = await fetch(CONFIG.WEBHOOK_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'getBookings' })
-                });
-                bookings = await response.json();
-                
-                updateStats();
-                renderBookings();
-                
-            } catch (error) {
-                console.error('Load bookings failed:', error);
-                showToast('載入失敗，請重試', 'error');
-            }
+    try {
+        if (!CONFIG.WEBHOOK_URL) {
+            showToast('請先設定 Webhook URL', 'error');
+            return;
         }
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        
+        const response = await fetch(CONFIG.WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'getBookings' }),
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            throw new Error('伺服器回應錯誤: ' + response.status);
+        }
+        
+        bookings = await response.json();
+        
+        if (!Array.isArray(bookings)) {
+            bookings = [];
+        }
+        
+        updateStats();
+        renderBookings();
+        
+    } catch (error) {
+        console.error('Load bookings failed:', error);
+        if (error.name === 'AbortError') {
+            showToast('載入逾時，請重試', 'error');
+        } else {
+            showToast('載入失敗：' + error.message, 'error');
+        }
+        bookings = [];
+        updateStats();
+        renderBookings();
+    }
+}
 
 
 
