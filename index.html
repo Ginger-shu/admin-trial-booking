@@ -1240,52 +1240,59 @@ async function checkAuthorization(userId) {
         // 載入可用教練
         // ============================================
         async function loadAvailableCoaches() {
-            const coachList = document.getElementById('coachList');
-            coachList.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-            
-            try {
-                if (!CONFIG.WEBHOOK_URL) {
-                    coachList.innerHTML = '<p style="color: var(--pink-dark);">請先設定 Webhook URL</p>';
-                    return;
-                }
-                
-                // 從 Calendar 取得可用教練
-                const response = await fetch(CONFIG.WEBHOOK_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'getAvailableCoaches',
-                        course: currentBooking.course,
-                        date: currentBooking.date,
-                        startTime: currentBooking.startTime,
-                        endTime: currentBooking.endTime,
-                        originalCoach: currentBooking.coach || ''  // 👈 傳送原本的教練
-                    })
-                });
-                const coaches = await response.json();
-                
-                if (coaches.length === 0) {
-                    coachList.innerHTML = '<p style="color: var(--gray); text-align: center;">沒有可用教練</p>';
-                    return;
-                }
-                
-                coachList.innerHTML = coaches.map(coach => `
-                    <div class="coach-option ${coach.isOriginal ? 'original' : ''}" 
-                         onclick="selectCoach('${coach.name}', this)">
-                        <div class="coach-radio"></div>
-                        <span class="coach-name">${coach.name}</span>
-                        ${coach.isOriginal ? '<span class="coach-tag">原時段</span>' : ''}
-                    </div>
-                `).join('');
-                
-            } catch (error) {
-                console.error('Load coaches failed:', error);
-                coachList.innerHTML = '<p style="color: var(--pink-dark);">載入失敗</p>';
-            }
+    const coachList = document.getElementById('coachList');
+    coachList.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    
+    try {
+        if (!CONFIG.WEBHOOK_URL) {
+            coachList.innerHTML = '<p style="color: var(--pink-dark);">請先設定 Webhook URL</p>';
+            return;
         }
-
-
-
+        
+        const response = await fetch(CONFIG.WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'getAvailableCoaches',
+                course: currentBooking.course,
+                date: currentBooking.date,
+                startTime: currentBooking.startTime,
+                endTime: currentBooking.endTime,
+                originalCoach: currentBooking.coach || ''
+            })
+        });
+        let coaches = await response.json();
+        
+        // ✅ 去重：根據教練名稱去除重複，保留第一個（isOriginal 優先）
+        const seen = new Set();
+        coaches = coaches.filter(coach => {
+            if (seen.has(coach.name)) {
+                return false;
+            }
+            seen.add(coach.name);
+            return true;
+        });
+        
+        if (coaches.length === 0) {
+            coachList.innerHTML = '<p style="color: var(--gray); text-align: center;">沒有可用教練</p>';
+            return;
+        }
+        
+        coachList.innerHTML = coaches.map(coach => `
+            <div class="coach-option ${coach.isOriginal ? 'original' : ''}" 
+                 onclick="selectCoach('${coach.name}', this)">
+                <div class="coach-radio"></div>
+                <span class="coach-name">${coach.name}</span>
+                ${coach.isOriginal ? '<span class="coach-tag">原時段</span>' : ''}
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Load coaches failed:', error);
+        coachList.innerHTML = '<p style="color: var(--pink-dark);">載入失敗</p>';
+    }
+}
+        
         function selectCoach(coachName, element) {
             selectedCoach = coachName;
             
